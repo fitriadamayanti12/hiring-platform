@@ -1,3 +1,4 @@
+// src/lib/store/slices/jobsSlice.ts
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
 import { jobService } from '@/services/jobService';
 
@@ -42,6 +43,12 @@ export interface FormFieldConfig {
   };
 }
 
+// Type untuk create job (tanpa auto-generated fields)
+export type CreateJobInput = Omit<Job, 'id' | 'created_at' | 'updated_at'>;
+
+// Type untuk update job
+export type UpdateJobInput = Partial<Omit<Job, 'id' | 'created_at' | 'updated_at'>>;
+
 interface JobsState {
   jobs: Job[];
   currentJob: Job | null;
@@ -80,7 +87,7 @@ export const fetchJobs = createAsyncThunk(
 
 export const createJob = createAsyncThunk(
   'jobs/createJob',
-  async (jobData: Omit<Job, 'id' | 'created_at' | 'updated_at'>, { rejectWithValue }) => {
+  async (jobData: CreateJobInput, { rejectWithValue }) => { // ✅ FIX: Use CreateJobInput type
     try {
       const newJob = await jobService.createJob(jobData);
       return newJob;
@@ -92,9 +99,8 @@ export const createJob = createAsyncThunk(
 
 export const updateJob = createAsyncThunk(
   'jobs/updateJob',
-  async ({ id, jobData }: { id: string; jobData: Partial<Job> }, { rejectWithValue }) => {
+  async ({ id, jobData }: { id: string; jobData: UpdateJobInput }, { rejectWithValue }) => { // ✅ FIX: Use UpdateJobInput type
     try {
-      // Note: You might need to implement updateJob in jobService
       const updatedJob = await jobService.updateJob(id, jobData);
       return updatedJob;
     } catch (error: any) {

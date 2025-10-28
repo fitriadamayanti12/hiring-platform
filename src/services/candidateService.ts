@@ -2,6 +2,9 @@
 import { createClient } from '@supabase/supabase-js';
 import { Candidate, CreateCandidateInput } from '@/types/candidate';
 
+// Ekspor types
+export type { Candidate, CreateCandidateInput };
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);

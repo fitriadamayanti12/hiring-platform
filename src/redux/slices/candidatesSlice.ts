@@ -1,24 +1,40 @@
 // src/redux/slices/candidatesSlice.ts
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { candidateService, Candidate } from '@/services/candidateService';
+import { candidateService } from '@/services/candidateService';
+import { Candidate } from '@/types/candidate';
 
 interface CandidatesState {
   candidates: Candidate[];
+  currentCandidate: Candidate | null;
+  filters: {
+    status: string;
+    keyword: string;
+  };
   loading: boolean;
   error: string | null;
 }
 
 const initialState: CandidatesState = {
   candidates: [],
+  currentCandidate: null,
+  filters: {
+    status: '',
+    keyword: '',
+  },
   loading: false,
   error: null,
 };
 
-export const fetchCandidates = createAsyncThunk(
+// Async thunks dengan tipe yang eksplisit
+export const fetchCandidates = createAsyncThunk<
+  Candidate[], // Return type
+  string | undefined, // Args type (jobId bisa undefined)
+  { rejectValue: string } // Reject type
+>(
   'candidates/fetchCandidates',
-  async (jobId?: string, { rejectWithValue }) => {
+  async (jobId, { rejectWithValue }) => {
     try {
-      const candidates = await candidateService.fetchCandidates(jobId);
+      const candidates = await candidateService.getCandidates(jobId);
       return candidates;
     } catch (error: any) {
       return rejectWithValue(error.message || 'Failed to fetch candidates');
@@ -26,9 +42,13 @@ export const fetchCandidates = createAsyncThunk(
   }
 );
 
-export const createCandidate = createAsyncThunk(
+export const createCandidate = createAsyncThunk<
+  Candidate, // Return type
+  any, // Args type (gunakan any sementara, atau sesuaikan dengan CreateCandidateInput)
+  { rejectValue: string } // Reject type
+>(
   'candidates/createCandidate',
-  async (candidateData: Omit<Candidate, 'id' | 'applied_at' | 'status'>, { rejectWithValue }) => {
+  async (candidateData, { rejectWithValue }) => {
     try {
       const newCandidate = await candidateService.createCandidate(candidateData);
       return newCandidate;
@@ -42,6 +62,27 @@ const candidatesSlice = createSlice({
   name: 'candidates',
   initialState,
   reducers: {
+    setCandidates: (state, action: PayloadAction<Candidate[]>) => {
+      state.candidates = action.payload;
+    },
+    setCurrentCandidate: (state, action: PayloadAction<Candidate | null>) => {
+      state.currentCandidate = action.payload;
+    },
+    updateCandidateStatus: (state, action: PayloadAction<{ id: string; status: string }>) => {
+      const candidate = state.candidates.find(c => c.id === action.payload.id);
+      if (candidate) {
+        candidate.status = action.payload.status;
+      }
+      if (state.currentCandidate && state.currentCandidate.id === action.payload.id) {
+        state.currentCandidate.status = action.payload.status;
+      }
+    },
+    setStatusFilter: (state, action: PayloadAction<string>) => {
+      state.filters.status = action.payload;
+    },
+    setKeywordFilter: (state, action: PayloadAction<string>) => {
+      state.filters.keyword = action.payload;
+    },
     clearError: (state) => {
       state.error = null;
     },
@@ -52,19 +93,30 @@ const candidatesSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchCandidates.fulfilled, (state, action: PayloadAction<Candidate[]>) => {
+      .addCase(fetchCandidates.fulfilled, (state, action) => {
         state.loading = false;
         state.candidates = action.payload;
       })
       .addCase(fetchCandidates.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload as string;
+        state.error = action.payload ?? 'Unknown error occurred';
       })
       .addCase(createCandidate.fulfilled, (state, action) => {
-        state.candidates.unshift(action.payload);
+        state.candidates.push(action.payload);
+      })
+      .addCase(createCandidate.rejected, (state, action) => {
+        state.error = action.payload ?? 'Unknown error occurred';
       });
   },
 });
 
-export const { clearError } = candidatesSlice.actions;
+export const { 
+  setCandidates, 
+  setCurrentCandidate, 
+  updateCandidateStatus,
+  setStatusFilter,
+  setKeywordFilter,
+  clearError 
+} = candidatesSlice.actions;
+
 export default candidatesSlice.reducer;

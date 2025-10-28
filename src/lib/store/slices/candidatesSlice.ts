@@ -1,78 +1,30 @@
-import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
-import { candidateService } from '@/services/candidateService';
+// src/lib/store/slices/candidatesSlice.ts
+import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { Candidate, CreateCandidateInput } from '@/types/candidate';
 
-export interface CandidateAttribute {
-  key: string;
-  label: string;
-  value: string;
-  order: number;
-}
-
-export interface Candidate {
-  id: string;
-  jobId?: string;
-  jobTitle?: string;
-  applicant?: any;
-  formData?: Record<string, string>;
-  attributes: CandidateAttribute[];
-  applied_date?: string;
-  status?: string;
-}
-
-interface TableConfig {
-  columnOrder: string[];
-  columnSizes: { [key: string]: number };
-  sortBy: string;
-  sortDirection: 'asc' | 'desc';
-  currentPage: number;
-  pageSize: number;
-}
-
-export interface CandidatesState {
-  candidates: Candidate[];
-  tableConfig: TableConfig;
-  loading: boolean;
-  error: string | null;
-}
-
-const initialState: CandidatesState = {
-  candidates: [], // Data akan diambil dari API
-  tableConfig: {
-    columnOrder: ['full_name', 'email', 'phone', 'gender', 'linkedin_link', 'domicile', 'applied_date'],
-    columnSizes: {
-      full_name: 200,
-      email: 250,
-      phone: 150,
-      gender: 100,
-      linkedin_link: 200,
-      domicile: 150,
-      applied_date: 150,
-    },
-    sortBy: 'applied_date',
-    sortDirection: 'desc',
-    currentPage: 1,
-    pageSize: 10,
+// Mock service - sesuaikan dengan service yang sebenarnya
+const candidateService = {
+  createCandidate: async (candidateData: CreateCandidateInput): Promise<Candidate> => {
+    // Simulasi API call - ganti dengan service Supabase yang sebenarnya
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve({
+          id: `cand_${Date.now()}`,
+          ...candidateData,
+          status: 'new',
+          applied_date: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+      }, 500);
+    });
   },
-  loading: false,
-  error: null,
 };
 
-// Async thunks untuk API calls
-export const fetchCandidates = createAsyncThunk(
-  'candidates/fetchCandidates',
-  async (_, { rejectWithValue }) => {
-    try {
-      const candidates = await candidateService.fetchCandidates();
-      return candidates;
-    } catch (error: any) {
-      return rejectWithValue(error.message || 'Failed to fetch candidates');
-    }
-  }
-);
-
+// ✅ FIX: Gunakan CreateCandidateInput yang sesuai
 export const createCandidate = createAsyncThunk(
   'candidates/createCandidate',
-  async (candidateData: Omit<Candidate, 'id'>, { rejectWithValue }) => {
+  async (candidateData: CreateCandidateInput, { rejectWithValue }) => {
     try {
       const newCandidate = await candidateService.createCandidate(candidateData);
       return newCandidate;
@@ -82,22 +34,67 @@ export const createCandidate = createAsyncThunk(
   }
 );
 
+interface CandidatesState {
+  candidates: Candidate[];
+  loading: boolean;
+  error: string | null;
+  tableConfig: {
+    columnOrder: string[];
+    columnSizes: { [key: string]: number };
+    sortBy: string;
+    sortDirection: 'asc' | 'desc';
+    currentPage: number;
+    pageSize: number;
+  };
+}
+
+const initialState: CandidatesState = {
+  candidates: [],
+  loading: false,
+  error: null,
+  tableConfig: {
+    columnOrder: [
+      'full_name',
+      'email',
+      'phone_number',
+      'gender',
+      'linkedin_link',
+      'domicile',
+      'applied_date',
+    ],
+    columnSizes: {},
+    sortBy: 'applied_date',
+    sortDirection: 'desc',
+    currentPage: 1,
+    pageSize: 10,
+  },
+};
+
 const candidatesSlice = createSlice({
   name: 'candidates',
   initialState,
   reducers: {
-    setCandidates: (state, action: PayloadAction<Candidate[]>) => {
-      state.candidates = action.payload;
-    },
     addCandidate: (state, action: PayloadAction<Candidate>) => {
       state.candidates.push(action.payload);
     },
-    resizeColumn: (state, action: PayloadAction<{ columnId: string; width: number }>) => {
-      const { columnId, width } = action.payload;
-      state.tableConfig.columnSizes[columnId] = width;
+    updateCandidate: (state, action: PayloadAction<{ id: string; updates: Partial<Candidate> }>) => {
+      const index = state.candidates.findIndex(candidate => candidate.id === action.payload.id);
+      if (index !== -1) {
+        state.candidates[index] = { ...state.candidates[index], ...action.payload.updates };
+      }
     },
+    deleteCandidate: (state, action: PayloadAction<string>) => {
+      state.candidates = state.candidates.filter(candidate => candidate.id !== action.payload);
+    },
+    setCandidates: (state, action: PayloadAction<Candidate[]>) => {
+      state.candidates = action.payload;
+    },
+    // Table configuration actions
     reorderColumns: (state, action: PayloadAction<string[]>) => {
       state.tableConfig.columnOrder = action.payload;
+    },
+    resizeColumn: (state, action: PayloadAction<{ columnId: string; width: number }>) => {
+      state.tableConfig.columnSizes[action.payload.columnId] = action.payload.width;
     },
     setSort: (state, action: PayloadAction<{ sortBy: string; sortDirection: 'asc' | 'desc' }>) => {
       state.tableConfig.sortBy = action.payload.sortBy;
@@ -107,30 +104,9 @@ const candidatesSlice = createSlice({
       state.tableConfig.currentPage = action.payload.currentPage;
       state.tableConfig.pageSize = action.payload.pageSize;
     },
-    clearError: (state) => {
-      state.error = null;
-    },
-    // Action untuk submit application (kompatibel dengan kode existing)
-    submitApplication: (state, action: PayloadAction<Candidate>) => {
-      state.candidates.push(action.payload);
-    },
   },
   extraReducers: (builder) => {
     builder
-      // Fetch Candidates
-      .addCase(fetchCandidates.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(fetchCandidates.fulfilled, (state, action) => {
-        state.loading = false;
-        state.candidates = action.payload;
-      })
-      .addCase(fetchCandidates.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload as string;
-      })
-      // Create Candidate
       .addCase(createCandidate.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -146,15 +122,15 @@ const candidatesSlice = createSlice({
   },
 });
 
-export const { 
-  setCandidates, 
-  addCandidate, 
-  resizeColumn, 
-  reorderColumns, 
-  setSort, 
+export const {
+  addCandidate,
+  updateCandidate,
+  deleteCandidate,
+  setCandidates,
+  reorderColumns,
+  resizeColumn,
+  setSort,
   setPagination,
-  clearError,
-  submitApplication,
 } = candidatesSlice.actions;
 
 export default candidatesSlice.reducer;

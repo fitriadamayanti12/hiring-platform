@@ -1,94 +1,49 @@
-// src/services/candidateService.ts
-import { supabase } from '@/lib/supabase'
+// src/lib/services/candidateService.ts
+import { createClient } from '@supabase/supabase-js';
+import { Candidate, CreateCandidateInput } from '@/types/candidate';
 
-export interface Candidate {
-  id: string;
-  job_id: string;
-  full_name: string;
-  email: string;
-  phone_number?: string;
-  linkedin_link?: string;
-  domicile?: string;
-  gender?: string;
-  date_of_birth?: string;
-  photo_profile?: string;
-  status: 'applied' | 'reviewed' | 'rejected' | 'hired';
-  applied_at: string;
-  resume_url?: string;
-}
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export const candidateService = {
-  async fetchCandidates(jobId?: string): Promise<Candidate[]> {
-    try {
-      let query = supabase
-        .from('candidates')
-        .select('*')
-        .order('applied_at', { ascending: false });
+  createCandidate: async (candidateData: CreateCandidateInput): Promise<Candidate> => {
+    // Tambahkan field yang di-generate otomatis
+    const dataToInsert = {
+      ...candidateData,
+      status: 'new',
+      applied_date: new Date().toISOString(),
+    };
 
-      if (jobId) {
-        query = query.eq('job_id', jobId);
-      }
+    const { data, error } = await supabase
+      .from('candidates')
+      .insert([dataToInsert])
+      .select()
+      .single();
 
-      const { data, error } = await query;
-
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Failed to fetch candidates:', error);
-      throw error;
+    if (error) {
+      throw new Error(`Failed to create candidate: ${error.message}`);
     }
+
+    return data;
   },
 
-  async createCandidate(candidateData: Omit<Candidate, 'id' | 'applied_at' | 'status'>): Promise<Candidate> {
-    try {
-      const candidateWithDefaults = {
-        ...candidateData,
-        status: 'applied' as const,
-        applied_at: new Date().toISOString(),
-      };
+  getCandidates: async (jobId?: string): Promise<Candidate[]> => {
+    let query = supabase
+      .from('candidates')
+      .select('*')
+      .order('applied_date', { ascending: false });
 
-      const { data, error } = await supabase
-        .from('candidates')
-        .insert([candidateWithDefaults])
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Failed to create candidate:', error);
-      throw error;
+    if (jobId) {
+      query = query.eq('job_id', jobId);
     }
+
+    const { data, error } = await query;
+
+    if (error) {
+      throw new Error(`Failed to fetch candidates: ${error.message}`);
+    }
+
+    return data || [];
   },
-
-  async updateCandidateStatus(id: string, status: Candidate['status']): Promise<Candidate> {
-    try {
-      const { data, error } = await supabase
-        .from('candidates')
-        .update({ status })
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Failed to update candidate status:', error);
-      throw error;
-    }
-  },
-
-  async deleteCandidate(id: string): Promise<void> {
-    try {
-      const { error } = await supabase
-        .from('candidates')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-    } catch (error) {
-      console.error('Failed to delete candidate:', error);
-      throw error;
-    }
-  }
 };

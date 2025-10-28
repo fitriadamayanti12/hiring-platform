@@ -1,6 +1,6 @@
 // src/redux/slices/jobsSlice.ts
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { jobService, Job } from '@/services/jobService';
+import { jobService } from '@/services/jobService';
 
 export interface Job {
   id: string;

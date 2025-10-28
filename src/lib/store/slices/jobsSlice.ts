@@ -44,7 +44,7 @@ export interface FormFieldConfig {
 }
 
 // Type untuk create job (tanpa auto-generated fields)
-export type CreateJobInput = Omit<Job, 'id' | 'created_at' | 'updated_at'>;
+export type CreateJobInput = Omit<Job, 'id' | 'created_at' | 'updated_at' | 'slug'>;
 
 // Type untuk update job
 export type UpdateJobInput = Partial<Omit<Job, 'id' | 'created_at' | 'updated_at'>>;
@@ -87,7 +87,7 @@ export const fetchJobs = createAsyncThunk(
 
 export const createJob = createAsyncThunk(
   'jobs/createJob',
-  async (jobData: CreateJobInput, { rejectWithValue }) => { // ✅ FIX: Use CreateJobInput type
+  async (jobData: CreateJobInput, { rejectWithValue }) => {
     try {
       const newJob = await jobService.createJob(jobData);
       return newJob;
@@ -99,7 +99,7 @@ export const createJob = createAsyncThunk(
 
 export const updateJob = createAsyncThunk(
   'jobs/updateJob',
-  async ({ id, jobData }: { id: string; jobData: UpdateJobInput }, { rejectWithValue }) => { // ✅ FIX: Use UpdateJobInput type
+  async ({ id, jobData }: { id: string; jobData: UpdateJobInput }, { rejectWithValue }) => {
     try {
       const updatedJob = await jobService.updateJob(id, jobData);
       return updatedJob;
@@ -134,7 +134,7 @@ const jobsSlice = createSlice({
     updateFieldConfig: (state, action: PayloadAction<{ fieldKey: string; required: boolean }>) => {
       if (state.currentJob) {
         const field = state.currentJob.application_form.sections[0].fields.find(
-          f => f.key === action.payload.fieldKey
+          (f: { key: string }) => f.key === action.payload.fieldKey
         );
         if (field) {
           field.validation.required = action.payload.required;
@@ -143,7 +143,13 @@ const jobsSlice = createSlice({
     },
     setFormConfiguration: (state, action: PayloadAction<FormFieldConfig[]>) => {
       if (state.currentJob) {
-        state.currentJob.application_form.sections[0].fields = action.payload;
+        // Convert FormFieldConfig to the field format expected by Job
+        state.currentJob.application_form.sections[0].fields = action.payload.map(field => ({
+          key: field.key,
+          validation: {
+            required: field.validation.required
+          }
+        }));
       }
     },
     clearError: (state) => {
@@ -157,7 +163,7 @@ const jobsSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchJobs.fulfilled, (state, action) => {
+      .addCase(fetchJobs.fulfilled, (state, action) => { // ✅ FIX: Remove explicit PayloadAction type
         state.loading = false;
         state.jobs = action.payload;
       })
@@ -170,7 +176,7 @@ const jobsSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(createJob.fulfilled, (state, action) => {
+      .addCase(createJob.fulfilled, (state, action) => { // ✅ FIX: Remove explicit PayloadAction type
         state.loading = false;
         state.jobs.push(action.payload);
       })
@@ -183,7 +189,7 @@ const jobsSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(updateJob.fulfilled, (state, action) => {
+      .addCase(updateJob.fulfilled, (state, action) => { // ✅ FIX: Remove explicit PayloadAction type
         state.loading = false;
         const index = state.jobs.findIndex(job => job.id === action.payload.id);
         if (index !== -1) {

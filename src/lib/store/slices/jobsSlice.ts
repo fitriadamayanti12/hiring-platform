@@ -163,9 +163,10 @@ const jobsSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchJobs.fulfilled, (state, action) => { // ✅ FIX: Remove explicit PayloadAction type
+      .addCase(fetchJobs.fulfilled, (state, action) => {
         state.loading = false;
-        state.jobs = action.payload;
+        // ✅ FIX: Use type assertion to handle Immer's WritableDraft
+        state.jobs = action.payload as Job[];
       })
       .addCase(fetchJobs.rejected, (state, action) => {
         state.loading = false;
@@ -176,9 +177,10 @@ const jobsSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(createJob.fulfilled, (state, action) => { // ✅ FIX: Remove explicit PayloadAction type
+      .addCase(createJob.fulfilled, (state, action) => {
         state.loading = false;
-        state.jobs.push(action.payload);
+        // ✅ FIX: Use type assertion
+        state.jobs.push(action.payload as Job);
       })
       .addCase(createJob.rejected, (state, action) => {
         state.loading = false;
@@ -189,14 +191,15 @@ const jobsSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(updateJob.fulfilled, (state, action) => { // ✅ FIX: Remove explicit PayloadAction type
+      .addCase(updateJob.fulfilled, (state, action) => {
         state.loading = false;
-        const index = state.jobs.findIndex(job => job.id === action.payload.id);
+        const updatedJob = action.payload as Job;
+        const index = state.jobs.findIndex(job => job.id === updatedJob.id);
         if (index !== -1) {
-          state.jobs[index] = action.payload;
+          state.jobs[index] = updatedJob;
         }
-        if (state.currentJob && state.currentJob.id === action.payload.id) {
-          state.currentJob = action.payload;
+        if (state.currentJob && state.currentJob.id === updatedJob.id) {
+          state.currentJob = updatedJob;
         }
       })
       .addCase(updateJob.rejected, (state, action) => {

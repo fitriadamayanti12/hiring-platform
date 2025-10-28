@@ -1,66 +1,54 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+// lib/store/slices/authSlice.ts
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  role: 'admin' | 'applicant';
-}
-
-export interface AuthState {
-  user: User | null;
+interface AuthState {
   isAuthenticated: boolean;
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    role: string;
+  } | null;
   isLoading: boolean;
 }
 
 const initialState: AuthState = {
-  user: null,
   isAuthenticated: false,
-  isLoading: false,
+  user: null,
+  isLoading: true,
 };
 
 const authSlice = createSlice({
-  name: 'auth',
+  name: "auth",
   initialState,
   reducers: {
-    loginStart: (state) => {
-      state.isLoading = true;
-    },
-    loginSuccess: (state, action: PayloadAction<User>) => {
+    setAuthState: (
+      state,
+      action: PayloadAction<{
+        isAuthenticated: boolean;
+        user: AuthState["user"];
+      }>
+    ) => {
+      state.isAuthenticated = action.payload.isAuthenticated;
+      state.user = action.payload.user;
       state.isLoading = false;
-      state.user = action.payload;
-      state.isAuthenticated = true;
     },
-    loginFailure: (state) => {
-      state.isLoading = false;
+    updateUser: (state, action: PayloadAction<Partial<AuthState["user"]>>) => {
+      if (state.user) {
+        state.user = { ...state.user, ...action.payload };
+      }
+    },
+    clearAuth: (state) => {
       state.isAuthenticated = false;
-    },
-    logout: (state) => {
       state.user = null;
-      state.isAuthenticated = false;
-    },
-    signupStart: (state) => {
-      state.isLoading = true;
-    },
-    signupSuccess: (state, action: PayloadAction<User>) => {
       state.isLoading = false;
-      state.user = action.payload;
-      state.isAuthenticated = true;
     },
-    signupFailure: (state) => {
-      state.isLoading = false;
+    setLoading: (state, action: PayloadAction<boolean>) => {
+      state.isLoading = action.payload;
     },
   },
 });
 
-export const {
-  loginStart,
-  loginSuccess,
-  loginFailure,
-  logout,
-  signupStart,
-  signupSuccess,
-  signupFailure,
-} = authSlice.actions;
-
+export const { setAuthState, updateUser, clearAuth, setLoading } =
+  authSlice.actions;
 export default authSlice.reducer;

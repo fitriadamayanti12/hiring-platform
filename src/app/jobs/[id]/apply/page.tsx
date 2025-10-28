@@ -1,4 +1,4 @@
-// src/app/jobs/apply/[id]/page.tsx
+// src/app/jobs/[id]/apply/page.tsx
 "use client";
 import { useState, useMemo, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
 import WebcamWithGesture from "@/components/WebcamWithGesture";
+import { useAuth } from "@/contexts/AuthContext"; // ✅ Import useAuth
 
 // Initialize Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -16,10 +17,13 @@ export default function ApplyJobPage() {
   const params = useParams();
   const router = useRouter();
   const dispatch = useDispatch();
+  const { user: authUser } = useAuth(); // ✅ Gunakan useAuth untuk user
 
   const jobId = params.id as string;
   const jobs = useSelector((state: any) => state.jobs.jobs);
-  const user = useSelector((state: any) => state.auth.user);
+
+  // Gunakan user dari auth context, fallback ke Redux
+  const user = authUser || useSelector((state: any) => state.auth.user);
 
   const job = jobs.find((j: any) => j.id === jobId);
 
@@ -113,8 +117,11 @@ export default function ApplyJobPage() {
     );
   }
 
-  // Initialize form state
-  const [formData, setFormData] = useState<Record<string, string>>({});
+  // Initialize form state dengan data user yang sudah login
+  const [formData, setFormData] = useState<Record<string, string>>({
+    full_name: user.user_metadata?.full_name || "",
+    email: user.email || "",
+  });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -222,38 +229,8 @@ export default function ApplyJobPage() {
         photoUrl = urlData.publicUrl;
       }
 
-      // 2. Prepare application data for Supabase
-      const applicationData = {
-        job_id: job.id,
-        job_title: job.title,
-        job_slug: job.slug,
-        applicant_id: user.id,
-        applicant_name: formData.full_name || user.name,
-        applicant_email: formData.email || user.email,
-        form_data: formData,
-        applied_date: new Date().toISOString(),
-        status: "submitted",
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-
-      // 3. Insert application to Supabase
-      const { data: application, error: applicationError } = await supabase
-        .from("applications")
-        .insert([applicationData])
-        .select()
-        .single();
-
-      if (applicationError) {
-        console.error("Error submitting application:", applicationError);
-        throw new Error(
-          `Failed to submit application: ${applicationError.message}`
-        );
-      }
-
-      // 4. Prepare candidate data for Supabase
+      // 2. Prepare candidate data for Supabase
       const candidateData = {
-        application_id: application.id,
         job_id: job.id,
         full_name: formData.full_name,
         email: formData.email,
@@ -269,7 +246,7 @@ export default function ApplyJobPage() {
         updated_at: new Date().toISOString(),
       };
 
-      // 5. Insert candidate to Supabase
+      // 3. Insert candidate to Supabase
       const { data: candidate, error: candidateError } = await supabase
         .from("candidates")
         .insert([candidateData])
@@ -278,32 +255,20 @@ export default function ApplyJobPage() {
 
       if (candidateError) {
         console.error("Error creating candidate:", candidateError);
-        // Don't throw here, as application was already created
+        throw new Error(
+          `Failed to submit application: ${candidateError.message}`
+        );
       }
 
-      // 6. Dispatch to Redux for local state management
-      dispatch({
-        type: "applications/submitApplication",
-        payload: {
-          id: application.id,
-          ...applicationData,
-        },
-      });
+      // 4. Dispatch to Redux for local state management (jika diperlukan)
+      if (dispatch) {
+        dispatch({
+          type: "candidates/addCandidate",
+          payload: candidate,
+        });
+      }
 
-      dispatch({
-        type: "candidates/addCandidate",
-        payload: candidate || {
-          id: `cand_${Date.now()}`,
-          attributes: Object.entries(formData).map(([key, value], index) => ({
-            key,
-            label: getFieldLabel(key),
-            value,
-            order: index + 1,
-          })),
-        },
-      });
-
-      // 7. Redirect to success page
+      // 5. Redirect to success page
       router.push("/jobs/apply/success");
     } catch (error: any) {
       console.error("Submission error:", error);

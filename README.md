@@ -103,6 +103,7 @@ Default Admin Account
 
 ## Project Structure
 hiring-platform/
+```bash
 ├── app/                    # Next.js App Router
 │   ├── admin/             # Admin panel pages
 │   ├── apply/             # Job application pages
@@ -122,6 +123,7 @@ hiring-platform/
 │   └── api/               # RTK Query endpoints
 ├── types/                 # TypeScript definitions
 └── public/                # Static assets
+```
 
 ## 🎯 Core Features
 
@@ -147,7 +149,7 @@ Three-stage hand pose detection for photo capture:
 ## Database Schema
 Supabase Tables
 
-## Jobs Table
+### Jobs Table
 - id (uuid, primary key)
 - title (text)
 - status (active/inactive/draft)
@@ -191,10 +193,3 @@ export const supabase = createClient(supabaseUrl, supabaseKey)
 ## 🚀 Deployment
 ### Vercel Deployment
 This project is automatically deployed on Vercel. Every push to the main branch triggers a new deployment.
-
-### Environment Variables on Vercel:
-```bash
-NEXT_PUBLIC_SUPABASE_URL = https://vqkvqhjnxgzxhyhzwnfs.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZxa3ZxaGpueGd6eGh5aHp3bmZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE2MjU0MjIsImV4cCI6MjA3NzIwMTQyMn0.RWaByxgHZcQ9OHnGQ7sbKpx_BITTKI3UHG73yqIMdes
-```
-

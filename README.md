@@ -93,13 +93,40 @@ npm start
 ```
 
 ## 🔐 Authentication
-Default Admin Account
+### 👨‍💼 Default Admin Account
 - Email: admin@example.com
 - Password: admin123
 
-## User Roles
+### 👤 Applicant Users
+- Registration: Self-service signup through the applicant portal
+- Authentication: Email/password-based authentication with Supabase Auth
+- Permissions: Job browsing, application submission, profile management
+- Access Routes: Public job listings and authenticated application forms
+
+### User Roles
 - Admin - Full access to job management, candidate dashboard, and analytics
 - Applicant - Job browsing, application submission, and profile management
+
+## Authentication Flow
+### Applicant Signup Process
+1. Navigate to Signup - Click "Sign Up" from the main navigation
+2. Create Account - Provide email, password, and basic profile information
+3. Email Verification - Optional email confirmation (configurable in Supabase)
+4. Complete Profile - Fill in additional applicant details
+5. Access Portal - Start browsing and applying for jobs
+
+### Session Management
+- JWT Tokens - Secure session management with Supabase JWT
+- Auto-refresh - Automatic token refresh for extended sessions
+- Protected Routes - Role-based route protection
+- Persistent Sessions - Login state preserved across browser sessions
+
+### Security Features
+- Row Level Security (RLS) - Database-level permission controls
+- Password Hashing - Secure bcrypt password storage
+- Email Validation - Configurable email confirmation
+- Session Timeout - Automatic session expiration
+- CORS Protection - Configured domain restrictions
 
 ## Project Structure
 hiring-platform/
